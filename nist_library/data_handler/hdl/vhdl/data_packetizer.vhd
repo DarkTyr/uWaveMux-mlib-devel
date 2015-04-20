@@ -50,7 +50,7 @@ Entity data_packetizer Is
 		--10GbE Data Interface
 		data_Out			: out std_logic_vector (63 downto 0);
 		data_Out_Valid		: out std_logic;
-		end_of_Frame		: out std_logic;
+		end_of_Frame		: out std_logic
 	);
 End data_packetizer;
 
@@ -63,14 +63,14 @@ Architecture Behavioral Of data_packetizer Is
 	Type sm1 Is (Idle, Header1, Header2, DataWait, Data);
 	Signal State 			: sm1;
 	Signal frame_count		: unsigned(63 downto 0);
-	Signal packet_count		: unsigned(31 downto 0);
+	Signal packet_count		: unsigned(15 downto 0);
 
-	
+	Begin
 
 	------------------------------------------------------------------------------
 	-- Overall governing sate machine
 	------------------------------------------------------------------------------
-	StateMachine : Process (rst, SPI_clk, State, bit_count, control, start_latch)
+	StateMachine : Process (rst, clk, State)
 	Begin
 		If (rst = '1') Then
 			packet_count 				<= (Others => '0');
@@ -111,6 +111,7 @@ Architecture Behavioral Of data_packetizer Is
 					If (packet_count >= unsigned(frame_size)) Then
 						data_Out_Valid 	<= '0';
 						end_of_Frame 	<= '1';
+						packet_count	<= (Others => '0');
 						If (data_output_en = '1') Then
 							State 		<= Header1;
 						Elsif (data_In_valid = '0') Then
