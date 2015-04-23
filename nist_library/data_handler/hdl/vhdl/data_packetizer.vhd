@@ -33,20 +33,12 @@ Entity data_packetizer Is
 		rst					: in std_logic;
 		ce					: in std_logic;
 		clk					: in std_logic;
-		--Control and Packet Signals
-		data_output_en		: in std_logic;
-		packet_type			: in std_logic_vector (7 downto 0);
-		packet_version		: in std_logic_vector (7 downto 0);
-		channel_count		: in std_logic_vector (15 downto 0);
-		samples_per_channel	: in std_logic_vector (15 downto 0);
-		flags				: in std_logic_vector (15 downto 0);
-		--Number of 64bit chunks of data in a frame (typically d999 ~ d1000)
-		frame_size			: in std_logic_vector(15 downto 0);
+		clk_1				: in std_logic;
+
+		data_out_en			: in std_logic;
 		--Data in FIFO interface (assumed first word fall through FIFO)
 		data_In_valid		: in std_logic;
-		data_In_Empty		: in std_logic;
 		data_In				: in std_logic_vector (63 downto 0);
-		data_In_Rd_En		: out std_logic;
 		--10GbE Data Interface
 		data_Out			: out std_logic_vector (63 downto 0);
 		data_Out_Valid		: out std_logic;
@@ -56,87 +48,126 @@ End data_packetizer;
 
 
 Architecture Behavioral Of data_packetizer Is 
+
+
+	------------------------------------------------------------------------------
+	-- Component Declarations
+	------------------------------------------------------------------------------
+	Component data_packetizer_sm Is
+		Port (
+			rst					: in std_logic;
+			ce					: in std_logic;
+			clk					: in std_logic;
+			--Control and Packet Signals
+			data_output_en		: in std_logic;
+			packet_type			: in std_logic_vector (7 downto 0);
+			packet_version		: in std_logic_vector (7 downto 0);
+			channel_count		: in std_logic_vector (15 downto 0);
+			samples_per_channel	: in std_logic_vector (15 downto 0);
+			flags				: in std_logic_vector (15 downto 0);
+			--Number of 64bit chunks of data in a frame (typically d999 ~ d1000)
+			frame_size			: in std_logic_vector(15 downto 0);
+			--Data in FIFO interface (assumed first word fall through FIFO)
+			data_In_valid		: in std_logic;
+			data_In_Empty		: in std_logic;
+			data_In				: in std_logic_vector (63 downto 0);
+			data_In_Rd_En		: out std_logic;
+			--10GbE Data Interface
+			data_Out			: out std_logic_vector (63 downto 0);
+			data_Out_Valid		: out std_logic;
+			end_of_Frame		: out std_logic
+			);
+	End Component;
+	
+	-- Component fifo_generator_0 Is
+		-- Port (
+			-- wr_clk 		: IN STD_LOGIC;
+			-- rd_clk 		: IN STD_LOGIC;
+			-- din 		: IN STD_LOGIC_VECTOR(63 DOWNTO 0);
+			-- wr_en 		: IN STD_LOGIC;
+			-- rd_en 		: IN STD_LOGIC;
+			-- dout 		: OUT STD_LOGIC_VECTOR(63 DOWNTO 0);
+			-- full 		: OUT STD_LOGIC;
+			-- empty 		: OUT STD_LOGIC;
+			-- valid 		: OUT STD_LOGIC
+		-- );
+	-- END Component;
+	
+	Component fifo_generator_0 IS
+	PORT
+		(
+			data		: IN STD_LOGIC_VECTOR (63 DOWNTO 0);
+			rdclk		: IN STD_LOGIC ;
+			rdreq		: IN STD_LOGIC ;
+			wrclk		: IN STD_LOGIC ;
+			wrreq		: IN STD_LOGIC ;
+			q		: OUT STD_LOGIC_VECTOR (63 DOWNTO 0);
+			rdempty		: OUT STD_LOGIC ;
+			wrfull		: OUT STD_LOGIC 
+		);
+	End Component fifo_generator_0;
+
 	------------------------------------------------------------------------------
 	-- Signal Definitions
-	------------------------------------------------------------------------------
-
-	Type sm1 Is (Idle, Header1, Header2, DataWait, Data);
-	Signal State 			: sm1;
-	Signal frame_count		: unsigned(63 downto 0);
-	Signal packet_count		: unsigned(15 downto 0);
+	------------------------------------------------------------------------------	
+	Signal fifo_sm_data		: std_logic_vector(63 downto 0);
+	Signal fifo_sm_Empty	: std_logic;
+	Signal fifo_sm_rdEn		: std_logic;
+	Signal fifo_sm_full		: std_logic;
+	Signal fifo_sm_valid	: std_logic;
 
 	Begin
-
-	------------------------------------------------------------------------------
-	-- Overall governing sate machine
-	------------------------------------------------------------------------------
-	StateMachine : Process (rst, clk, State)
-	Begin
-		If (rst = '1') Then
-			packet_count 				<= (Others => '0');
-			frame_count 				<= (Others => '0');
-
-		Elsif (Rising_Edge(clk)) Then
-			Case State is
-			
-				When Idle =>
-					packet_count 		<= (Others => '0');
-					If (data_output_en = '1') Then
-						State <= Header1;
-					End If;						
-					
-				When Header1 =>
-					frame_count			<= frame_count + 1;
-					data_Out_Valid 		<= '1';
-					data_Out			<= packet_type & 
-										   packet_version & 
-										   channel_count & 
-										   samples_per_channel & 
-										   flags;
-					State 				<= Header2;
-
-				When Header2 =>
-					data_Out_Valid 		<= '1';
-					data_Out			<= std_logic_vector(frame_count);
-					State 				<= Data;
-
-				When DataWait =>
-					If (data_In_valid = '1') Then
-						data_In_Rd_En	<= '1';
-						State			<= Data;
-					End If;
-
-                When Data =>
-					
-					If (packet_count >= unsigned(frame_size)) Then
-						data_Out_Valid 	<= '0';
-						end_of_Frame 	<= '1';
-						packet_count	<= (Others => '0');
-						If (data_output_en = '1') Then
-							State 		<= Header1;
-						Elsif (data_In_valid = '0') Then
-							State		<= DataWait;
-						Else
-							State		<= Idle;
-						End If;
-					Else
-						If (data_In_valid = '1') Then
-							data_out		<= data_In;
-							data_out_valid	<= '1';
-							data_In_Rd_En	<= '1';
-							packet_count	<= packet_count + 1;
-						Else
-							data_Out_Valid 	<= '0';
-						End If;
-					End If;
-
-
-				When Others =>
-					State 				<= Idle;
-					
-			End Case;
-		End If;
-	End Process StateMachine;
 	
+	------------------------------------------------------------------------------
+	-- Component Instantiations 
+	------------------------------------------------------------------------------
+	packet_sm : data_packetizer_sm
+	Port Map(
+		rst					=> rst,
+		ce					=> ce,
+		clk					=> clk,
+		data_output_en		=> data_out_en,
+		packet_type			=> x"01",
+		packet_version		=> x"02",
+		channel_count		=> x"0304",
+		samples_per_channel	=> x"0506",
+		flags				=> x"0708",
+		
+		frame_size			=> x"00FF",
+		
+		data_In_valid		=> fifo_sm_valid,
+		data_In_Empty		=> fifo_sm_Empty,
+		data_In				=> fifo_sm_data,
+		data_In_Rd_En		=> fifo_sm_rdEn,
+		--10GbE Data Interface
+		data_Out			=> data_Out,
+		data_Out_Valid		=> data_Out_Valid,
+		end_of_Frame		=> end_of_Frame);
+		
+	-- Data_in_FIFO : fifo_generator_0
+	-- Port Map(
+		-- wr_clk				=> clk_1,
+		-- rd_clk				=> clk,
+		-- wr_en 				=> data_In_valid,
+		-- rd_en 				=> fifo_sm_rdEn,
+		-- din					=> data_In,
+		-- dout 				=> fifo_sm_data,
+		-- full 				=> fifo_sm_full,
+		-- empty 				=> fifo_sm_Empty,
+		-- valid 				=> fifo_sm_valid);
+		
+	Data_in_FIFO : fifo_generator_0
+	Port Map(
+		wrclk				=> clk_1,
+		rdclk				=> clk,
+		wrreq 				=> data_In_valid,
+		rdreq 				=> fifo_sm_rdEn,
+		data				=> data_In,
+		q 					=> fifo_sm_data,
+		rdempty 			=> fifo_sm_Empty,
+		wrfull 				=> fifo_sm_full);
+		
+		
+	fifo_sm_valid <= not(fifo_sm_Empty);
 	
 End Architecture Behavioral;
