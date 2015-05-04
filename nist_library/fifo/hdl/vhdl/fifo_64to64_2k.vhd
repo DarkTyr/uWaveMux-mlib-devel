@@ -26,8 +26,8 @@
 --    All rights reserved.                                                    --
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
--- You must compile the wrapper file fifo_32bitIn_64bitOut.vhd when simulating
--- the core, fifo_32bitIn_64bitOut. When compiling the wrapper file, be sure to
+-- You must compile the wrapper file fifo_64to64_2k.vhd when simulating
+-- the core, fifo_64to64_2k. When compiling the wrapper file, be sure to
 -- reference the XilinxCoreLib VHDL simulation library. For detailed
 -- instructions, please refer to the "CORE Generator Help".
 
@@ -40,27 +40,29 @@ USE ieee.std_logic_1164.ALL;
 -- synthesis translate_off
 LIBRARY XilinxCoreLib;
 -- synthesis translate_on
-ENTITY fifo_32bitIn_64bitOut IS
+ENTITY fifo_64to64_2k IS
   PORT (
-    clk 	: IN STD_LOGIC;
-	ce		: IN STD_LOGIC;
-    din 	: IN STD_LOGIC_VECTOR(31 DOWNTO 0);
-    wr_en 	: IN STD_LOGIC;
-    rd_en 	: IN STD_LOGIC;
-    dout 	: OUT STD_LOGIC_VECTOR(63 DOWNTO 0);
-    full 	: OUT STD_LOGIC;
-    empty 	: OUT STD_LOGIC;
-    valid 	: OUT STD_LOGIC
-  );
-END fifo_32bitIn_64bitOut;
-
-ARCHITECTURE fifo_32bitIn_64bitOut_a OF fifo_32bitIn_64bitOut IS
--- synthesis translate_on
-COMPONENT wrapped_fifo_32bitIn_64bitOut
-  PORT (
+    rst : IN STD_LOGIC;
     wr_clk : IN STD_LOGIC;
     rd_clk : IN STD_LOGIC;
-    din : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
+    din : IN STD_LOGIC_VECTOR(63 DOWNTO 0);
+    wr_en : IN STD_LOGIC;
+    rd_en : IN STD_LOGIC;
+    dout : OUT STD_LOGIC_VECTOR(63 DOWNTO 0);
+    full : OUT STD_LOGIC;
+    empty : OUT STD_LOGIC;
+    valid : OUT STD_LOGIC
+  );
+END fifo_64to64_2k;
+
+ARCHITECTURE fifo_64to64_2k_a OF fifo_64to64_2k IS
+-- synthesis translate_off
+COMPONENT wrapped_fifo_64to64_2k
+  PORT (
+    rst : IN STD_LOGIC;
+    wr_clk : IN STD_LOGIC;
+    rd_clk : IN STD_LOGIC;
+    din : IN STD_LOGIC_VECTOR(63 DOWNTO 0);
     wr_en : IN STD_LOGIC;
     rd_en : IN STD_LOGIC;
     dout : OUT STD_LOGIC_VECTOR(63 DOWNTO 0);
@@ -69,10 +71,9 @@ COMPONENT wrapped_fifo_32bitIn_64bitOut
     valid : OUT STD_LOGIC
   );
 END COMPONENT;
--- synthesis translate_off
 
 -- Configuration specification
-  FOR ALL : wrapped_fifo_32bitIn_64bitOut USE ENTITY XilinxCoreLib.fifo_generator_v9_3(behavioral)
+  FOR ALL : wrapped_fifo_64to64_2k USE ENTITY XilinxCoreLib.fifo_generator_v9_3(behavioral)
     GENERIC MAP (
       c_add_ngc_constraint => 0,
       c_application_type_axis => 0,
@@ -99,9 +100,9 @@ END COMPONENT;
       c_axis_type => 0,
       c_common_clock => 0,
       c_count_type => 0,
-      c_data_count_width => 12,
+      c_data_count_width => 11,
       c_default_value => "BlankString",
-      c_din_width => 32,
+      c_din_width => 64,
       c_din_width_axis => 1,
       c_din_width_rach => 32,
       c_din_width_rdch => 64,
@@ -158,7 +159,7 @@ END COMPONENT;
       c_has_prog_flags_wrch => 0,
       c_has_rd_data_count => 0,
       c_has_rd_rst => 0,
-      c_has_rst => 0,
+      c_has_rst => 1,
       c_has_slave_ce => 0,
       c_has_srst => 0,
       c_has_underflow => 0,
@@ -166,7 +167,7 @@ END COMPONENT;
       c_has_wr_ack => 0,
       c_has_wr_data_count => 0,
       c_has_wr_rst => 0,
-      c_implementation_type => 2,
+      c_implementation_type => 5,
       c_implementation_type_axis => 1,
       c_implementation_type_rach => 1,
       c_implementation_type_rdch => 1,
@@ -175,22 +176,22 @@ END COMPONENT;
       c_implementation_type_wrch => 1,
       c_init_wr_pntr_val => 0,
       c_interface_type => 0,
-      c_memory_type => 1,
+      c_memory_type => 4,
       c_mif_file_name => "BlankString",
       c_msgon_val => 0,
       c_optimization_mode => 0,
       c_overflow_low => 0,
-      c_preload_latency => 2,
-      c_preload_regs => 1,
-      c_prim_fifo_type => "4kx9",
-      c_prog_empty_thresh_assert_val => 2,
+      c_preload_latency => 1,
+      c_preload_regs => 0,
+      c_prim_fifo_type => "2kx18",
+      c_prog_empty_thresh_assert_val => 5,
       c_prog_empty_thresh_assert_val_axis => 1022,
       c_prog_empty_thresh_assert_val_rach => 1022,
       c_prog_empty_thresh_assert_val_rdch => 1022,
       c_prog_empty_thresh_assert_val_wach => 1022,
       c_prog_empty_thresh_assert_val_wdch => 1022,
       c_prog_empty_thresh_assert_val_wrch => 1022,
-      c_prog_empty_thresh_negate_val => 3,
+      c_prog_empty_thresh_negate_val => 6,
       c_prog_empty_type => 0,
       c_prog_empty_type_axis => 0,
       c_prog_empty_type_rach => 0,
@@ -198,14 +199,14 @@ END COMPONENT;
       c_prog_empty_type_wach => 0,
       c_prog_empty_type_wdch => 0,
       c_prog_empty_type_wrch => 0,
-      c_prog_full_thresh_assert_val => 4093,
+      c_prog_full_thresh_assert_val => 2043,
       c_prog_full_thresh_assert_val_axis => 1023,
       c_prog_full_thresh_assert_val_rach => 1023,
       c_prog_full_thresh_assert_val_rdch => 1023,
       c_prog_full_thresh_assert_val_wach => 1023,
       c_prog_full_thresh_assert_val_wdch => 1023,
       c_prog_full_thresh_assert_val_wrch => 1023,
-      c_prog_full_thresh_negate_val => 4092,
+      c_prog_full_thresh_negate_val => 2042,
       c_prog_full_type => 0,
       c_prog_full_type_axis => 0,
       c_prog_full_type_rach => 0,
@@ -216,7 +217,7 @@ END COMPONENT;
       c_rach_type => 0,
       c_rd_data_count_width => 11,
       c_rd_depth => 2048,
-      c_rd_freq => 1,
+      c_rd_freq => 256,
       c_rd_pntr_width => 11,
       c_rdch_type => 0,
       c_reg_slice_mode_axis => 0,
@@ -238,23 +239,23 @@ END COMPONENT;
       c_use_ecc_wach => 0,
       c_use_ecc_wdch => 0,
       c_use_ecc_wrch => 0,
-      c_use_embedded_reg => 1,
+      c_use_embedded_reg => 0,
       c_use_fifo16_flags => 0,
       c_use_fwft_data_count => 0,
       c_valid_low => 0,
       c_wach_type => 0,
       c_wdch_type => 0,
       c_wr_ack_low => 0,
-      c_wr_data_count_width => 12,
-      c_wr_depth => 4096,
+      c_wr_data_count_width => 11,
+      c_wr_depth => 2048,
       c_wr_depth_axis => 1024,
       c_wr_depth_rach => 16,
       c_wr_depth_rdch => 1024,
       c_wr_depth_wach => 16,
       c_wr_depth_wdch => 1024,
       c_wr_depth_wrch => 16,
-      c_wr_freq => 1,
-      c_wr_pntr_width => 12,
+      c_wr_freq => 256,
+      c_wr_pntr_width => 11,
       c_wr_pntr_width_axis => 10,
       c_wr_pntr_width_rach => 4,
       c_wr_pntr_width_rdch => 10,
@@ -266,11 +267,12 @@ END COMPONENT;
     );
 -- synthesis translate_on
 BEGIN
--- synthesis translate_on
-U0 : wrapped_fifo_32bitIn_64bitOut
+-- synthesis translate_off
+U0 : wrapped_fifo_64to64_2k
   PORT MAP (
-    wr_clk => clk,
-    rd_clk => clk,
+    rst => rst,
+    wr_clk => wr_clk,
+    rd_clk => rd_clk,
     din => din,
     wr_en => wr_en,
     rd_en => rd_en,
@@ -281,4 +283,4 @@ U0 : wrapped_fifo_32bitIn_64bitOut
   );
 -- synthesis translate_on
 
-END fifo_32bitIn_64bitOut_a;
+END fifo_64to64_2k_a;

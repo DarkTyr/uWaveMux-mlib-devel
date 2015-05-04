@@ -18,7 +18,7 @@
 -- Revision: 1.0
 ------------------------------------------------------------------------------ 
 -- ===========================================================================
--- DISCLAIMER: This code is FREEWARE which is provided on an “as is” basis, 
+-- DISCLAIMER: This code is FREEWARE which is provided on an “as is�? basis, 
 -- YOU MAY USE IT ON YOUR OWN RISK, WITHOUT ANY WARRANTY. 
 -- ===========================================================================
 
@@ -60,7 +60,7 @@ Architecture Behavioral Of data_packetizer_sm Is
 	-- Signal Definitions
 	------------------------------------------------------------------------------
 
-	Type sm1 Is (Idle, Header1, Header2, DataWait, Data);
+	Type sm1 Is (Idle, Header1, Header2, Data);
 	Signal State 			: sm1;
 	Signal frame_count		: unsigned(63 downto 0);
 	Signal packet_count		: unsigned(15 downto 0);
@@ -74,11 +74,9 @@ Architecture Behavioral Of data_packetizer_sm Is
 	Begin
 		If (rst = '1') Then
 			packet_count 				<= (Others => '0');
-			frame_count 				<= (Others => '0');
 			data_In_Rd_En				<= '0';
 			data_Out_Valid 				<= '0';
 			end_of_Frame				<= '0';
-			packet_count 				<= (Others => '0');
 			data_out 					<= (Others => '0');
 			State						<= Idle;
 
@@ -91,11 +89,13 @@ Architecture Behavioral Of data_packetizer_sm Is
 					end_of_Frame		<= '0';
 					packet_count 		<= (Others => '0');
 					data_out 			<= (Others => '0');
+					frame_count			<= (Others => '0');
 					If (data_output_en = '1') Then
 						State <= Header1;
 					End If;						
 					
 				When Header1 =>
+					packet_count		<= (Others => '0');
 					frame_count			<= frame_count + 1;
 					end_of_Frame		<= '0';
 					data_Out_Valid 		<= '1';
@@ -109,38 +109,38 @@ Architecture Behavioral Of data_packetizer_sm Is
 				When Header2 =>
 					data_Out_Valid 		<= '1';
 					data_Out			<= std_logic_vector(frame_count);
-					State 				<= DataWait;
-
-				When DataWait =>
-					data_Out_Valid 		<= '0';
-					end_of_Frame		<= '0';
-					If (data_In_valid = '1') Then
+					State 				<= Data;
+					If (data_In_Empty = '0') Then
 						data_In_Rd_En	<= '1';
-						State			<= Data;
+					Else
+						data_In_Rd_En	<= '0';
 					End If;
 
-                When Data =>
+				When Data =>
+					data_Out 		<= data_In;
 					If (packet_count >= unsigned(frame_size)) Then
-						data_In_Rd_En	<= '0';
-						data_Out_Valid 	<= '0';
-						end_of_Frame 	<= '1';
-						packet_count	<= (Others => '0');
+						data_In_Rd_En		<= '0';
+						data_Out_Valid		<= '0';
+						end_of_Frame		<= '1';
 						If (data_output_en = '1') Then
-							State 		<= Header1;
+							State 			<= Header1;
 						Elsif (data_output_en = '0') Then
-							State		<= Idle;
+							State			<= Idle;
 						Else
-							State		<= Idle;
+							State			<= Idle;
 						End If;
 					Else
-						end_of_Frame	<= '0';
-						If (data_In_valid = '1') Then
-							data_out		<= data_In;
-							data_out_valid	<= '1';
+						If (data_In_Empty = '0') Then
 							data_In_Rd_En	<= '1';
+						Else
+							data_In_Rd_En	<= '0';
+						End If;
+							
+						If (data_In_valid = '1') Then
+							data_Out_Valid	<= '1';
 							packet_count	<= packet_count + 1;
 						Else
-							data_Out_Valid 	<= '0';
+							data_Out_Valid	<= '0';
 						End If;
 					End If;
 

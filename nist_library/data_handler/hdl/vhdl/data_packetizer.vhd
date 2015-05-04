@@ -18,7 +18,7 @@
 -- Revision: 1.0
 ------------------------------------------------------------------------------ 
 -- ===========================================================================
--- DISCLAIMER: This code is FREEWARE which is provided on an “as is” basis, 
+-- DISCLAIMER: This code is FREEWARE which is provided on an “as is�? basis, 
 -- YOU MAY USE IT ON YOUR OWN RISK, WITHOUT ANY WARRANTY. 
 -- ===========================================================================
 
@@ -38,7 +38,7 @@ Entity data_packetizer Is
 		data_out_en			: in std_logic;
 		--Data in FIFO interface (assumed first word fall through FIFO)
 		data_In_valid		: in std_logic;
-		data_In				: in std_logic_vector (63 downto 0);
+		data_In				: in std_logic_vector (31 downto 0);
 		--10GbE Data Interface
 		data_Out			: out std_logic_vector (63 downto 0);
 		data_Out_Valid		: out std_logic;
@@ -79,33 +79,37 @@ Architecture Behavioral Of data_packetizer Is
 			);
 	End Component;
 	
-	-- Component fifo_generator_0 Is
-		-- Port (
-			-- wr_clk 		: IN STD_LOGIC;
-			-- rd_clk 		: IN STD_LOGIC;
-			-- din 		: IN STD_LOGIC_VECTOR(63 DOWNTO 0);
-			-- wr_en 		: IN STD_LOGIC;
-			-- rd_en 		: IN STD_LOGIC;
-			-- dout 		: OUT STD_LOGIC_VECTOR(63 DOWNTO 0);
-			-- full 		: OUT STD_LOGIC;
-			-- empty 		: OUT STD_LOGIC;
-			-- valid 		: OUT STD_LOGIC
-		-- );
-	-- END Component;
+	--Xilinx 32 to 64
+    COMPONENT fifo_generator_0
+          PORT (
+            rst : IN STD_LOGIC;
+            wr_clk : IN STD_LOGIC;
+            rd_clk : IN STD_LOGIC;
+            din : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
+            wr_en : IN STD_LOGIC;
+            rd_en : IN STD_LOGIC;
+            dout : OUT STD_LOGIC_VECTOR(63 DOWNTO 0);
+            full : OUT STD_LOGIC;
+            empty : OUT STD_LOGIC;
+            valid : OUT STD_LOGIC;
+            rd_data_count : OUT STD_LOGIC_VECTOR(10 DOWNTO 0)
+          );
+        END COMPONENT;
 	
-	Component fifo_generator_0 IS
-	PORT
-		(
-			data		: IN STD_LOGIC_VECTOR (63 DOWNTO 0);
-			rdclk		: IN STD_LOGIC ;
-			rdreq		: IN STD_LOGIC ;
-			wrclk		: IN STD_LOGIC ;
-			wrreq		: IN STD_LOGIC ;
-			q		: OUT STD_LOGIC_VECTOR (63 DOWNTO 0);
-			rdempty		: OUT STD_LOGIC ;
-			wrfull		: OUT STD_LOGIC 
-		);
-	End Component fifo_generator_0;
+	--Altera
+	-- Component fifo_generator_0 IS
+	-- PORT
+		-- (
+			-- data		: IN STD_LOGIC_VECTOR (63 DOWNTO 0);
+			-- rdclk		: IN STD_LOGIC ;
+			-- rdreq		: IN STD_LOGIC ;
+			-- wrclk		: IN STD_LOGIC ;
+			-- wrreq		: IN STD_LOGIC ;
+			-- q		: OUT STD_LOGIC_VECTOR (63 DOWNTO 0);
+			-- rdempty		: OUT STD_LOGIC ;
+			-- wrfull		: OUT STD_LOGIC 
+		-- );
+	-- End Component fifo_generator_0;
 
 	------------------------------------------------------------------------------
 	-- Signal Definitions
@@ -115,7 +119,8 @@ Architecture Behavioral Of data_packetizer Is
 	Signal fifo_sm_rdEn		: std_logic;
 	Signal fifo_sm_full		: std_logic;
 	Signal fifo_sm_valid	: std_logic;
-
+	Signal rd_data_count    : std_logic_vector(10 downto 0);
+	
 	Begin
 	
 	------------------------------------------------------------------------------
@@ -126,6 +131,7 @@ Architecture Behavioral Of data_packetizer Is
 		rst					=> rst,
 		ce					=> ce,
 		clk					=> clk,
+		
 		data_output_en		=> data_out_en,
 		packet_type			=> x"01",
 		packet_version		=> x"02",
@@ -133,7 +139,7 @@ Architecture Behavioral Of data_packetizer Is
 		samples_per_channel	=> x"0506",
 		flags				=> x"0708",
 		
-		frame_size			=> x"00FF",
+		frame_size			=> x"000F",
 		
 		data_In_valid		=> fifo_sm_valid,
 		data_In_Empty		=> fifo_sm_Empty,
@@ -144,30 +150,20 @@ Architecture Behavioral Of data_packetizer Is
 		data_Out_Valid		=> data_Out_Valid,
 		end_of_Frame		=> end_of_Frame);
 		
-	-- Data_in_FIFO : fifo_generator_0
-	-- Port Map(
-		-- wr_clk				=> clk_1,
-		-- rd_clk				=> clk,
-		-- wr_en 				=> data_In_valid,
-		-- rd_en 				=> fifo_sm_rdEn,
-		-- din					=> data_In,
-		-- dout 				=> fifo_sm_data,
-		-- full 				=> fifo_sm_full,
-		-- empty 				=> fifo_sm_Empty,
-		-- valid 				=> fifo_sm_valid);
-		
-	Data_in_FIFO : fifo_generator_0
-	Port Map(
-		wrclk				=> clk_1,
-		rdclk				=> clk,
-		wrreq 				=> data_In_valid,
-		rdreq 				=> fifo_sm_rdEn,
-		data				=> data_In,
-		q 					=> fifo_sm_data,
-		rdempty 			=> fifo_sm_Empty,
-		wrfull 				=> fifo_sm_full);
-		
-		
-	fifo_sm_valid <= not(fifo_sm_Empty);
+    Data_in_FIFO : fifo_generator_0
+      PORT MAP (
+        rst             => rst,
+        wr_clk          => clk_1,
+        rd_clk          => clk,
+        din             => data_In,
+        wr_en           => data_In_valid,
+        rd_en           => fifo_sm_rdEn,
+        dout            => fifo_sm_data,
+        full            => fifo_sm_full,
+        empty           => fifo_sm_Empty,
+        valid           => fifo_sm_valid,
+        rd_data_count   => rd_data_count
+      );
+	  
 	
 End Architecture Behavioral;
