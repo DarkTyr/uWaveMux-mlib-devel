@@ -64,6 +64,7 @@ Architecture Behavioral Of data_packetizer_sm Is
 	Signal State 			: sm1;
 	Signal frame_count		: unsigned(63 downto 0);
 	Signal packet_count		: unsigned(15 downto 0);
+	Signal valid_hold		: std_logic;
 
 	Begin
 
@@ -79,6 +80,7 @@ Architecture Behavioral Of data_packetizer_sm Is
 			end_of_Frame				<= '0';
 			data_out 					<= (Others => '0');
 			State						<= Idle;
+			valid_hold					<= '0';
 
 		Elsif (Rising_Edge(clk)) Then
 			Case State is
@@ -87,6 +89,7 @@ Architecture Behavioral Of data_packetizer_sm Is
 					data_In_Rd_En		<= '0';
 					data_Out_Valid 		<= '0';
 					end_of_Frame		<= '0';
+					valid_hold			<= '0';
 					packet_count 		<= (Others => '0');
 					data_out 			<= (Others => '0');
 					frame_count			<= (Others => '0');
@@ -95,6 +98,14 @@ Architecture Behavioral Of data_packetizer_sm Is
 					End If;						
 					
 				When Header1 =>
+					data_In_Rd_En	<= '0';
+					If (data_In_valid = '1') Then
+						valid_hold			<= '1';
+					End If;
+
+					If (data_output_en = '0') Then
+						State <= Idle;
+					End If;
 					packet_count		<= (Others => '0');
 					frame_count			<= frame_count + 1;
 					end_of_Frame		<= '0';
@@ -107,6 +118,11 @@ Architecture Behavioral Of data_packetizer_sm Is
 					State 				<= Header2;
 
 				When Header2 =>
+
+					If (data_In_valid = '1') Then
+						valid_hold			<= '1';
+					End If;
+
 					data_Out_Valid 		<= '1';
 					data_Out			<= std_logic_vector(frame_count);
 					State 				<= Data;
@@ -118,30 +134,24 @@ Architecture Behavioral Of data_packetizer_sm Is
 
 				When Data =>
 					data_Out 		<= data_In;
-					If (packet_count >= unsigned(frame_size)) Then
-						data_In_Rd_En		<= '0';
-						data_Out_Valid		<= '0';
-						end_of_Frame		<= '1';
-						If (data_output_en = '1') Then
-							State 			<= Header1;
-						Elsif (data_output_en = '0') Then
-							State			<= Idle;
-						Else
-							State			<= Idle;
-						End If;
+					If (data_In_Empty = '0') Then
+						data_In_Rd_En	<= '1';
 					Else
-						If (data_In_Empty = '0') Then
-							data_In_Rd_En	<= '1';
-						Else
-							data_In_Rd_En	<= '0';
+						data_In_Rd_En	<= '0';
+					End If;
+						
+					If (data_In_valid = '1' or valid_hold = '1') Then
+						valid_hold		<= '0';
+						data_Out_Valid	<= '1';
+						packet_count	<= packet_count + 1;
+						If (packet_count >= (unsigned(frame_size) - 1)) Then
+							State 			<= Header1;
+							end_of_Frame	<= '1';
 						End If;
-							
-						If (data_In_valid = '1') Then
-							data_Out_Valid	<= '1';
-							packet_count	<= packet_count + 1;
-						Else
-							data_Out_Valid	<= '0';
-						End If;
+
+					Else
+						data_Out_Valid	<= '0';
+						end_of_Frame	<= '0';
 					End If;
 
 				When Others =>
