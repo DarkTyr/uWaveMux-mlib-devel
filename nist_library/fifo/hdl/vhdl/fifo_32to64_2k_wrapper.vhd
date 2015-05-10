@@ -40,7 +40,7 @@ LIBRARY std, ieee;
 USE std.standard.ALL;
 USE ieee.std_logic_1164.ALL;
 
-ENTITY fifo_32bitin_64bitout_wrapper IS
+ENTITY fifo_32to64_2k_wrapper IS
   PORT (
 	rst		: IN STD_LOGIC;
     clk 	: IN STD_LOGIC;
@@ -53,9 +53,9 @@ ENTITY fifo_32bitin_64bitout_wrapper IS
     empty 	: OUT STD_LOGIC := '1';
     valid 	: OUT STD_LOGIC := '0'
   );
-END fifo_32bitin_64bitout_wrapper;
+END fifo_32to64_2k_wrapper;
 
-ARCHITECTURE fifo_32bitin_64bitout_wrapper_a OF fifo_32bitin_64bitout_wrapper IS
+ARCHITECTURE fifo_32to64_2k_wrapper_a OF fifo_32to64_2k_wrapper IS
 
 COMPONENT fifo_32to64_2k
   PORT (
@@ -74,7 +74,7 @@ END COMPONENT;
 
 BEGIN
 
-U0 : fifo_32to64_2k
+U32 : fifo_32to64_2k
   PORT MAP (
 	rst		=> rst,
     wr_clk 	=> clk,
@@ -88,4 +88,4 @@ U0 : fifo_32to64_2k
     valid 	=> valid
   );
 
-END fifo_32bitin_64bitout_wrapper_a;
+END fifo_32to64_2k_wrapper_a;

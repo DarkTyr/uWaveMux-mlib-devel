@@ -38,22 +38,22 @@
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 
-ENTITY fifo_64bitIn_64bitOut_wrapper IS
+ENTITY fifo_64to64_2k_wrapper IS
   PORT (
+	rst		: IN STD_LOGIC;
     clk 	: IN STD_LOGIC;
 	ce		: IN STD_LOGIC;
-    rst 	: IN STD_LOGIC;
     din 	: IN STD_LOGIC_VECTOR(63 DOWNTO 0);
     wr_en 	: IN STD_LOGIC;
     rd_en 	: IN STD_LOGIC;
-    dout 	: OUT STD_LOGIC_VECTOR(63 DOWNTO 0);
-    full 	: OUT STD_LOGIC;
-    empty 	: OUT STD_LOGIC;
-    valid 	: OUT STD_LOGIC
+    dout 	: OUT STD_LOGIC_VECTOR(63 DOWNTO 0) := (Others => '0');
+    full 	: OUT STD_LOGIC := '0';
+    empty 	: OUT STD_LOGIC := '1';
+    valid 	: OUT STD_LOGIC := '0'
   );
-END fifo_64bitIn_64bitOut_wrapper;
+END fifo_64to64_2k_wrapper;
 
-ARCHITECTURE fifo_64bitIn_64bitOut_wrapper_a OF fifo_64bitIn_64bitOut_wrapper IS
+ARCHITECTURE fifo_64to64_2k_wrapper_a OF fifo_64to64_2k_wrapper IS
 
 COMPONENT fifo_64to64_2k
   PORT (
@@ -72,7 +72,7 @@ END COMPONENT;
 
 BEGIN
 
-U0 : fifo_64to64_2k
+U64 : fifo_64to64_2k
   PORT MAP (
     rst 	=> rst,
     wr_clk 	=> clk,
@@ -86,4 +86,4 @@ U0 : fifo_64to64_2k
     valid 	=> valid
   );
 
-END fifo_64bitIn_64bitOut_wrapper_a;
+END fifo_64to64_2k_wrapper_a;
