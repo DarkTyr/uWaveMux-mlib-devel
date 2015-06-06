@@ -46,11 +46,11 @@ Entity data_packetizer_sm Is
 		data_In_valid		: in std_logic;
 		data_In_Empty		: in std_logic;
 		data_In				: in std_logic_vector (63 downto 0);
-		data_In_Rd_En		: out std_logic;
+		data_In_Rd_En		: out std_logic := '0';
 		--10GbE Data Interface
-		data_Out			: out std_logic_vector (63 downto 0);
-		data_Out_Valid		: out std_logic;
-		end_of_Frame		: out std_logic
+		data_Out			: out std_logic_vector (63 downto 0) := (Others => '0');
+		data_Out_Valid		: out std_logic := '0';
+		end_of_Frame		: out std_logic := '0'
 	);
 End data_packetizer_sm;
 
@@ -60,10 +60,10 @@ Architecture Behavioral Of data_packetizer_sm Is
 	-- Signal Definitions
 	------------------------------------------------------------------------------
 
-	Type sm1 Is (Idle, Delay, Header1, Header2, Data);
-	Signal State 			: sm1;
-	Signal frame_count		: unsigned(63 downto 0);
-	Signal packet_count		: unsigned(15 downto 0);
+	Type sm1 Is (Idle, Header1, Header2, Data);
+	Signal State 			: sm1 := Idle;
+	Signal frame_count		: unsigned(63 downto 0) := (Others => '0');
+	Signal packet_count		: unsigned(15 downto 0) := (Others => '0');
 	Signal valid_hold		: std_logic;
 
 	Begin
@@ -94,24 +94,11 @@ Architecture Behavioral Of data_packetizer_sm Is
 					data_out 			<= (Others => '0');
 					frame_count			<= (Others => '0');
 					If (data_output_en = '1') Then
-						State <= Delay;
-					End If;
-
-				When Delay =>
-					data_In_Rd_En		<= '0';
-					end_of_Frame		<= '0';
-					data_Out_Valid 		<= '0';					
-					If (data_In_valid = '1') Then
-						valid_hold		<= '1';
-					End If;
-					If (data_output_en = '0') Then
-						State 			<= Idle;
-					Else
-						State 			<= Header1;
+						State <= Header1;
 					End If;
 
 				When Header1 =>
-					data_In_Rd_En	<= '0';
+					data_In_Rd_En		<= '0';
 					If (data_In_valid = '1') Then
 						valid_hold		<= '1';
 					End If;
@@ -136,16 +123,20 @@ Architecture Behavioral Of data_packetizer_sm Is
 					data_Out_Valid 		<= '1';
 					data_Out			<= std_logic_vector(frame_count);
 					State 				<= Data;
-					If (data_In_Empty = '0') Then
-						data_In_Rd_En	<= '1';
-					Else
-						data_In_Rd_En	<= '0';
-					End If;
+					--If (data_In_Empty = '0') Then
+					--	data_In_Rd_En	<= '1';
+					--Else
+					--	data_In_Rd_En	<= '0';
+					--End If;
 
 				When Data =>
 					data_Out 		<= data_In;
 					If (data_In_Empty = '0') Then
-						data_In_Rd_En	<= '1';
+						If (packet_count < (unsigned(frame_size) - 2)) Then
+							data_In_Rd_En	<= '1';
+						Else
+							data_In_Rd_En	<= '0';
+						End If;
 					Else
 						data_In_Rd_En	<= '0';
 					End If;
@@ -155,7 +146,7 @@ Architecture Behavioral Of data_packetizer_sm Is
 						data_Out_Valid	<= '1';
 						packet_count	<= packet_count + 1;
 						If (packet_count >= (unsigned(frame_size) - 1)) Then
-							State 			<= Delay;
+							State <= Header1;
 							end_of_Frame	<= '1';
 						End If;
 
@@ -170,6 +161,5 @@ Architecture Behavioral Of data_packetizer_sm Is
 			End Case;
 		End If;
 	End Process StateMachine;
-	
 	
 End Architecture Behavioral;

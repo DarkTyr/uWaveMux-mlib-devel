@@ -40,7 +40,7 @@ Entity ROACH2_IF_SM Is
 		control				: in std_logic_vector (3 downto 0);
 		--output_port bit order(msb to lsb)
 		--(SWAT_SLE, CK_SLE, LO_SLE, Ser_DI, Ser_CK, Strobe)
-		output_port			: out std_logic_vector (5 downto 0)
+		output_port			: out std_logic_vector (5 downto 0) := (Others => '0')
 	);
 End ROACH2_IF_SM;
 
