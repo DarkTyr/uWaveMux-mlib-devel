@@ -11,6 +11,7 @@ addpath([getenv('XILINX_PATH'), '/ISE/sysgen/util/']);
 addpath([getenv('XILINX_PATH'), '/ISE/sysgen/bin/lin64']);
 addpath([getenv('MLIB_DEVEL_PATH'), '/casper_library']);
 addpath([getenv('MLIB_DEVEL_PATH'), '/xps_library']);
+addpath([getenv('MLIB_DEVEL_PATH'), '/nist_library']);
 xlAddSysgen([getenv('XILINX_PATH'), '/ISE'])
 sysgen_startup
 % If CASPER_BACKPORT is in the environment with non-zero length, then force
