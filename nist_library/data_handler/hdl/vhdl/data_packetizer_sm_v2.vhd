@@ -67,82 +67,84 @@ Architecture Behavioral Of data_packetizer_sm_v2 Is
 	------------------------------------------------------------------------------
 	StateMachine : Process (rst, clk, State)
 	Begin
-		If (rst = '1') Then
-			packet_count 				<= (Others => '0');
-			data_in_rd_en				<= '0';
-			data_out_valid 				<= '0';
-			end_of_frame				<= '0';
-			data_out 					<= (Others => '0');
-			State						<= Idle;
+		If (Rising_Edge(clk)) Then
+			If (rst = '1') Then
+				packet_count 				<= (Others => '0');
+				data_in_rd_en				<= '0';
+				data_out_valid 				<= '0';
+				end_of_frame				<= '0';
+				data_out 					<= (Others => '0');
+				State						<= Idle;
 
-		Elsif (Rising_Edge(clk)) Then
-			Case State is
+			Else
+				Case State is
 
-				When Idle =>
-					data_in_rd_en		<= '0';
-					data_out_valid 		<= '0';
-					end_of_frame		<= '0';
-					packet_count 		<= (Others => '0');
-					data_out 			<= (Others => '0');
-					frame_count		    <= (Others => '0');
-					If (data_output_en = '1') Then
-						State <= DataWait;
-			        Else
-			            State <= Idle;
-					End If;
+					When Idle =>
+						data_in_rd_en		<= '0';
+						data_out_valid 		<= '0';
+						end_of_frame		<= '0';
+						packet_count 		<= (Others => '0');
+						data_out 			<= (Others => '0');
+						frame_count		    <= (Others => '0');
+						If (data_output_en = '1') Then
+							State <= DataWait;
+					    Else
+					        State <= Idle;
+						End If;
 
-				When DataWait =>
-					data_in_rd_en		<= '0';
-					end_of_frame		<= '0';
-					data_Out_valid 		<= '0';
-					If (data_output_en = '0') Then
-					    State           <= Idle;
-					Elsif (data_in_grab_frame = '1') Then
-						State           <= Header1;
-					End IF;
+					When DataWait =>
+						data_in_rd_en		<= '0';
+						end_of_frame		<= '0';
+						data_Out_valid 		<= '0';
+						If (data_output_en = '0') Then
+							State           <= Idle;
+						Elsif (data_in_grab_frame = '1') Then
+							State           <= Header1;
+						End IF;
 
-				When Header1 =>
-					packet_count		<= (Others => '0');
-					frame_count			<= frame_count + unsigned(frame_increment);
-					data_Out_Valid 		<= '1';
-					data_Out			<= packet_type &
-										   packet_version &
-										   channel_count &
-										   samples_per_channel &
-										   flags;
-					State 				<= Header2;
+					When Header1 =>
+						packet_count		<= (Others => '0');
+						frame_count			<= frame_count + unsigned(frame_increment);
+						data_Out_Valid 		<= '1';
+						data_Out			<= packet_type &
+											   packet_version &
+											   channel_count &
+											   samples_per_channel &
+											   flags;
+						State 				<= Header2;
 
-				When Header2 =>
-					data_Out			<= std_logic_vector(frame_count);
-					State 				<= Data;
+					When Header2 =>
+						data_Out			<= std_logic_vector(frame_count);
+						State 				<= Data;
 
-				When Data =>
+					When Data =>
 
-				    If(packet_count >= (unsigned(frame_size) - 4)) Then
-				        data_in_rd_en <= '0';
-				    Else
-				       data_in_rd_en <= '1';
-				    End If;
+						If(packet_count >= (unsigned(frame_size) - 4)) Then
+						    data_in_rd_en <= '0';
+						Else
+						   data_in_rd_en <= '1';
+						End If;
 
-				    If(packet_count >= (unsigned(frame_size) - 1)) Then
-				        State <= DataWait;
-				        end_of_frame <= '1';
-				    Else
-				        State <= Data;
-				    End If;
+						If(packet_count >= (unsigned(frame_size) - 1)) Then
+						    State <= DataWait;
+						    end_of_frame <= '1';
+						Else
+						    State <= Data;
+						End If;
 
-                    If(data_in_valid = '1') Then
-                        data_Out_valid <= '1';
-                        data_out <= data_in;
-                        packet_count <= packet_count + 1;
-					Else
-						data_Out_valid <= '0';
-                    End If;
+		                If(data_in_valid = '1') Then
+		                    data_Out_valid <= '1';
+		                    data_out <= data_in;
+		                    packet_count <= packet_count + 1;
+						Else
+							data_Out_valid <= '0';
+		                End If;
 
-				When Others =>
-					State 				<= Idle;
+					When Others =>
+						State 				<= Idle;
 
-			End Case;
+				End Case;
+			End If;
 		End If;
 	End Process StateMachine;
 
